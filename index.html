@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>100-Mile Border Zone</title>
+<link rel="stylesheet" href="vendor/leaflet-1.9.4.css">
+<style>
+  :root { --ink:#1b1f24; --muted:#5c6570; --panel:#ffffffee; --line:#d0d5da;
+          --b25:#7f1d1d; --b50:#c0392b; --b100:#f1948a; --lake:#1f618d; }
+  @media (prefers-color-scheme: dark) { :root { --ink:#e8ebef; --muted:#9aa4ae; --panel:#1b1f24ee; --line:#3a4149; } }
+  html, body { margin:0; height:100%; font:14px/1.45 -apple-system, system-ui, sans-serif; color:var(--ink); }
+  #map { position:absolute; inset:0; background:#d9e6f2; }
+  #panel { position:absolute; top:12px; left:12px; z-index:1000; width:330px; max-width:calc(100% - 24px);
+           background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; box-shadow:0 4px 18px #0003; }
+  h1 { font-size:17px; margin:0 0 4px; }
+  p { margin:6px 0; color:var(--muted); }
+  #status { font-weight:600; color:var(--ink); }
+  table { border-collapse:collapse; width:100%; margin:6px 0; }
+  td { padding:3px 4px; vertical-align:middle; color:var(--ink); }
+  td.k { width:22px; }
+  .sw { display:block; width:18px; height:14px; border-radius:3px; border:1px solid #0003; }
+  label { display:block; margin:6px 0 2px; color:var(--ink); cursor:pointer; }
+  small { color:var(--muted); }
+  .city { background:none; border:none; }
+  .city span { display:inline-block; padding:2px 7px; border-radius:5px; font-size:13px; font-weight:700; color:#fff; white-space:nowrap; text-shadow:0 0 3px #000c; box-shadow:0 1px 3px #0006; }
+  .city i { display:inline-block; width:10px; height:10px; border-radius:50%; border:2px solid #fff; margin-right:4px; vertical-align:-1px; }
+  /* At national zoom, minor cities are dots only; their text appears once zoomed in. */
+  .city span { position:absolute; top:-10px; }
+  .city.right span { left:7px; }
+  .city.left span { right:7px; }
+  .city.hidden-label span { display:none; }
+  #panel { font-size:14px; max-height:calc(100% - 24px); overflow:auto; box-sizing:border-box; }
+  #cities { max-height:200px; overflow:auto; font-size:13px; }
+  #cities td { padding:1px 4px; }
+  #cities td.n { text-align:right; font-variant-numeric:tabular-nums; }
+  details { margin-top:6px; } summary { cursor:pointer; color:var(--ink); }
+  .about { max-height:220px; overflow:auto; font-size:12px; line-height:1.4; padding-right:4px; }
+  .about p { margin:5px 0; }
+  .leaflet-popup-content { font:13px/1.4 -apple-system, system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="panel">
+  <h1>How far in does the border zone reach?</h1>
+  <p id="status">Computing distance bands…</p>
+  <table>
+    <tr><td class="k"><span class="sw" style="background:var(--b25)"></span></td><td><b>0–25 mi</b> from boundary — warrantless vehicle search <i>and</i> entry onto private land (not homes)<br><small><b>117.6M people</b> · 34.6% of the US</small></td></tr>
+    <tr><td class="k"><span class="sw" style="background:var(--b50)"></span></td><td><b>25–50 mi</b> — warrantless vehicle/vessel search authority<br><small><b>+34.7M</b> · cumulative 152.3M · 44.8%</small></td></tr>
+    <tr><td class="k"><span class="sw" style="background:var(--b100)"></span></td><td><b>50–100 mi</b> — same authority, outer limit of the zone<br><small><b>+31.8M</b> · cumulative 184.1M · 54.1%</small></td></tr>
+    <tr><td class="k"><span class="sw" style="background:#f9e79f;border:2px solid #b7950b"></span></td><td><b>Great Lakes claim</b> — extra reach if CBP measures 100 mi from every lakeshore, Lake Michigan included (not in the statute; ACLU of Michigan 2021; no court ruling)<br><small><b>+21.8M</b> · cumulative 205.9M · 60.5%</small></td></tr>
+    <tr><td class="k"><span class="sw" style="background:none;border-style:dashed"></span></td><td>Unshaded — outside the 100-mile zone<br><small><b>156.0M</b> · 45.9% (statutory) · 134.2M · 39.5% if the lake claim holds</small></td></tr>
+  </table>
+  <label><input type="checkbox" id="togLakes" checked> Show the Great Lakes claim outline</label>
+  <label><input type="checkbox" id="togCities" checked> Show cities inside the zone with miles to boundary</label>
+  <div id="cities"></div>
+  <p><small><b>Click anywhere</b> for miles to the nearest boundary. "Boundary" = land borders (mid-lake line at the Great Lakes) and the coast.</small></p>
+  <details>
+    <summary><small><b>About the data · sources · accuracy</b></small></summary>
+    <div class="about">
+      <p><b>Not legal advice.</b> This map illustrates a legal boundary as described in federal statute and regulation. It is not a government map and does not describe your rights in any specific situation.</p>
+      <p><b>Legal basis.</b> 8 U.S.C. § 1357(a)(3) (warrantless search within a "reasonable distance" of an external boundary; 25 miles for private land) and 8 CFR 287.1(a) ("reasonable distance" = 100 air miles; "external boundary" = land boundaries and the territorial sea). Source: Cornell Legal Information Institute, retrieved 2026-09-14.</p>
+      <p><b>The Great Lakes claim</b> is CBP's asserted position as described by the ACLU of Michigan, <i>The Border's Long Shadow</i> (March 2021). That report cites no CBP document for the claim, and no federal court opinion deciding the question was found as of 2026-09-14. It is drawn separately so the two readings are not confused.</p>
+      <p><b>Geometry.</b> Country, state, and lake outlines from Natural Earth 1:50m (public domain) via world-atlas. Distances are geodesic air miles computed in the browser with Turf.js. Expect errors of a few miles near complex coastlines and small islands.</p>
+      <p><b>Population.</b> U.S. Census Bureau, county population estimates, vintage 2024 (July 1, 2024), 3,144 counties, 340.1M total. A county is counted in a band if its Census internal-point centroid falls there, so large counties straddling a band edge are all-in or all-out. Treat figures as estimates, not parcel-level counts.</p>
+      <p><b>Cities.</b> Natural Earth populated places, filtered to ≥ 300,000 population. Only cities inside a zone are labeled; when labels would overlap, smaller cities show as dots until you zoom in.</p>
+      <p><b>Software.</b> Leaflet (BSD-2), Turf.js (MIT), topojson-client (ISC). No tracking, cookies, or analytics on this page.</p>
+      <p><b>Last updated:</b> 2026-09-14.</p>
+    </div>
+  </details>
+</div>
+
+<script src="vendor/leaflet-1.9.4.js"></script>
+<script src="vendor/turf-6.5.0.min.js"></script>
+<script src="vendor/topojson-client-3.1.0.min.js"></script>
+<script>
+const map = L.map('map', { worldCopyJump:true, zoomSnap:0.25, attributionControl:true });
+map.attributionControl.setPrefix('Natural Earth · world-atlas · Leaflet');
+map.fitBounds([[24.3, -125.5], [49.5, -66.5]], { paddingTopLeft:[520, 10], paddingBottomRight:[10, 10] });
+
+const css = getComputedStyle(document.documentElement);
+const COLORS = { 25:css.getPropertyValue('--b25').trim(), 50:css.getPropertyValue('--b50').trim(), 100:css.getPropertyValue('--b100').trim() };
+const status = document.getElementById('status');
+const bandsStat = L.layerGroup().addTo(map);   // statutory bands
+const bandsLake = L.layerGroup().addTo(map);   // CBP lake-shore extra reach
+
+// Band = country minus its inward buffer. Islands narrower than 2×d vanish in the buffer → entirely inside the band. Correct.
+const inward = (poly, mi) => { const inner = turf.buffer(poly, -mi, { units:'miles' }); return inner ? turf.difference(poly, inner) : poly; };
+const style = mi => ({ color:COLORS[mi], weight:0, fillColor:COLORS[mi], fillOpacity:0.75 });
+
+Promise.all([
+  fetch('data/countries-50m.json').then(r => r.json()),
+  fetch('data/lakes-50m.geojson').then(r => r.json()),
+  fetch('data/populated-places-50m.geojson').then(r => r.json()),
+  fetch('data/admin1-50m.geojson').then(r => r.json())
+]).then(([topo, lakesAll, places, admin1]) => {
+  // Vector basemap: no tiles, no API key.
+  const world = topojson.feature(topo, topo.objects.countries);
+  L.geoJSON(world, { style:{ color:'#b8bec4', weight:0.7, fillColor:'#f3f3f0', fillOpacity:1 } }).addTo(map);
+  const states = { type:'FeatureCollection', features: admin1.features.filter(f => ['USA','CAN','MEX'].includes(f.properties.adm0_a3)) };
+  L.geoJSON(states, { style:{ color:'#9aa3ad', weight:0.6, fill:true, fillOpacity:0 },
+    onEachFeature:(f, l) => l.bindTooltip(f.properties.name, { sticky:true, direction:'top', opacity:0.9 }) }).addTo(map);
+  const usa = topojson.feature(topo, topo.objects.countries).features.find(f => f.id === '840');
+  if (!usa) throw new Error('USA outline missing');
+  const GL = ['Lake Superior','Lake Michigan','Lake Huron','Lake Erie','Lake Ontario'];
+  const lakes = turf.featureCollection(lakesAll.features.filter(f => GL.includes(f.properties.name)));
+
+  // Statutory bands, widest first so narrow bands paint on top.
+  for (const mi of [100, 50, 25]) L.geoJSON(inward(usa, mi), { style: style(mi) }).addTo(bandsStat);
+
+  // CBP reading: 100 mi from every lakeshore, clipped to the US, minus what the statute already covers.
+  const z100 = inward(usa, 100);
+  let lakeZone = null;
+  for (const b of turf.buffer(lakes, 100, { units:'miles' }).features) {
+    const part = turf.intersect(b, usa); if (!part) continue;
+    lakeZone = lakeZone ? turf.union(lakeZone, part) : part;
+  }
+  const lakeExtra = lakeZone ? turf.difference(lakeZone, z100) : null;
+  if (lakeExtra) L.geoJSON(lakeExtra, { style:{ color:'#b7950b', weight:2.5, dashArray:'6 4', fillColor:'#f4d03f', fillOpacity:0.45 } }).addTo(bandsLake);
+  L.geoJSON(lakes, { style:{ color:'#1f618d', weight:1, fillColor:'#aed6f1', fillOpacity:0.9 } }).addTo(map);
+  L.geoJSON(usa, { style:{ color:'#222', weight:1, fill:false } }).addTo(map);
+
+  // Click → miles to nearest boundary (statutory) and to nearest Great Lakes shore.
+  const boundary = turf.polygonToLine(usa);
+  const bLines = (boundary.type === 'FeatureCollection' ? boundary.features : [boundary]).flatMap(f => turf.flatten(f).features);
+  const lakeLines = lakes.features.flatMap(f => turf.flatten(turf.polygonToLine(f)).features);
+  const nearest = (pt, lines) => Math.min(...lines.map(l => turf.pointToLineDistance(pt, l, { units:'miles' })));
+  map.on('click', e => {
+    const pt = turf.point([e.latlng.lng, e.latlng.lat]);
+    const inUS = turf.booleanPointInPolygon(pt, usa);
+    const dB = nearest(pt, bLines), dL = nearest(pt, lakeLines);
+    const verdict = !inUS ? 'Outside the United States outline.'
+      : dB <= 100 ? `<b>Inside the 100-mile zone</b> (statutory reading).`
+      : dL <= 100 ? `<b>Outside</b> under the statute, <b>inside</b> under CBP's lake-shore claim.`
+      : `<b>Outside the zone</b> under both readings.`;
+    L.popup().setLatLng(e.latlng).setContent(
+      `${verdict}<br>${dB.toFixed(0)} mi to nearest boundary/coast<br>${dL.toFixed(0)} mi to nearest Great Lakes shore`).openOn(map);
+  });
+
+  // Cities: colored by statutory band, label shows miles to boundary. Popup adds the lake-shore distance.
+  const cityLayer = L.layerGroup().addTo(map);
+  const bandColor = d => d <= 25 ? COLORS[25] : d <= 50 ? COLORS[50] : d <= 100 ? COLORS[100] : '#555';
+  const cities = places.features.filter(f => f.properties.adm0_a3 === 'USA' && f.properties.pop_max >= 300000)
+    .map(f => { const pt = turf.point(f.geometry.coordinates);
+      return { name:f.properties.name.replace(/\s+/g,' '), st:f.properties.adm1name, lat:f.geometry.coordinates[1], lng:f.geometry.coordinates[0],
+               pop:f.properties.pop_max, dB:nearest(pt, bLines), dL:nearest(pt, lakeLines) }; })
+    .filter(c => c.dB <= 100 || c.dL <= 100)
+    .sort((a,b) => a.dB - b.dB);
+  const cityLake = L.layerGroup();
+  const placed = [];   // {c, marker}
+  for (const c of cities) {
+    const col = bandColor(c.dB), bg = c.dB > 100 ? '#f4d03f' : col, fg = c.dB > 100 ? '#1b1f24' : '#fff';
+    const grp = c.dB <= 100 ? cityLayer : cityLake;
+    L.circleMarker([c.lat, c.lng], { radius:4, color:'#fff', weight:1.5, fillColor:bg, fillOpacity:1 }).addTo(grp);
+    const LEFT_LABEL = new Set(['Tampa','Baton Rouge','Milwaukee','Detroit']);
+    const side = (c.lng < -90.5 || LEFT_LABEL.has(c.name)) ? 'left' : 'right';
+    const icon = L.divIcon({ className:'city ' + side, iconSize:[0,0], html:`<span style="background:${bg};color:${fg};text-shadow:${c.dB > 100 ? "none" : "0 0 3px #000c"}">${c.name} · ${c.dB <= 100 ? c.dB.toFixed(0) + ' mi' : c.dL.toFixed(0) + ' mi to lake'}</span>`, iconAnchor:[0, 0] });
+    const marker = L.marker([c.lat, c.lng], { icon, interactive:false }).addTo(grp);
+    L.circleMarker([c.lat, c.lng], { radius:8, opacity:0, fillOpacity:0 }).bindPopup(
+      `<b>${c.name}, ${c.st}</b><br>${c.dB.toFixed(0)} mi to nearest boundary/coast → ${c.dB <= 100 ? 'inside' : 'outside'} the 100-mile zone<br>` +
+      `${c.dL.toFixed(0)} mi to nearest Great Lakes shore${c.dB > 100 && c.dL <= 100 ? ' → inside only under CBP\'s lake claim' : ''}`).addTo(grp);
+    placed.push({ c, marker, side });
+  }
+  // Greedy label placement: biggest cities first; a label that would overlap one already shown becomes a dot.
+  const PX_PER_CHAR = 7.6, LABEL_H = 22, PAD = 4;
+  function relayout() {
+    const boxes = [];
+    const PRIORITY = new Set(['Cleveland']);   // always placed first, so their labels win collisions
+    placed.sort((a,b) => (PRIORITY.has(b.c.name) - PRIORITY.has(a.c.name)) || (b.c.pop - a.c.pop));
+    for (const {c, marker, side} of placed) {
+      const el = marker.getElement(); if (!el) continue;
+      const p = map.latLngToLayerPoint([c.lat, c.lng]);
+      const w = (c.name.length + (c.dB <= 100 ? 8 : 16)) * PX_PER_CHAR + 14;
+      const box = side === 'right'
+        ? { x1:p.x + 7 - PAD, y1:p.y - 10 - PAD, x2:p.x + 7 + w + PAD, y2:p.y - 10 + LABEL_H + PAD }
+        : { x1:p.x - 7 - w - PAD, y1:p.y - 10 - PAD, x2:p.x - 7 + PAD, y2:p.y - 10 + LABEL_H + PAD };
+      const hit = boxes.some(b => box.x1 < b.x2 && box.x2 > b.x1 && box.y1 < b.y2 && box.y2 > b.y1);
+      el.classList.toggle('hidden-label', hit);
+      if (!hit) boxes.push(box);
+    }
+  }
+  cityLake.addTo(map);
+  map.on('zoomend moveend', relayout); relayout();
+  document.getElementById('togLakes').addEventListener('change', () => setTimeout(relayout, 0));
+  document.getElementById('cities').innerHTML = '<table>' + cities.filter(c => c.dB <= 100).map(c =>
+    `<tr><td><span class="sw" style="display:inline-block;width:10px;height:10px;background:${bandColor(c.dB)}"></span> ${c.name}</td><td class="n">${c.dB.toFixed(0)} mi</td></tr>`).join('')
+    + cities.filter(c => c.dB > 100).sort((a,b) => a.dL - b.dL).map(c =>
+    `<tr><td><span class="sw" style="display:inline-block;width:10px;height:10px;background:#f4d03f;border:1px solid #b7950b"></span> ${c.name} <small>(lake claim only)</small></td><td class="n">${c.dL.toFixed(0)} mi to lake</td></tr>`).join('') + '</table>';
+  document.getElementById('togCities').onchange = e => e.target.checked ? cityLayer.addTo(map) : map.removeLayer(cityLayer);
+
+  document.getElementById('togLakes').onchange = e => { if (e.target.checked) { bandsLake.addTo(map); cityLake.addTo(map); } else { map.removeLayer(bandsLake); map.removeLayer(cityLake); } };
+  status.textContent = 'Darker = closer to the boundary. Click the map to measure.';
+}).catch(err => { status.textContent = 'Failed to build map: ' + err.message; console.error(err); });
+</script>
+</body>
+</html>
