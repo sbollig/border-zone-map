@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>100-Mile Border Zone</title>
+<title>Mapped: How Far Inland the 100-Mile Border Zone Reaches</title>
 <link rel="stylesheet" href="vendor/leaflet-1.9.4.css">
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Encode+Sans+Semi+Condensed:wght@600;700&family=Noto+Serif:wght@400;700&family=Fira+Sans:wght@400;600;700&display=swap');
   :root { --ink:#1b1f24; --muted:#5c6570; --panel:#ffffffee; --line:#d0d5da;
           --b25:#7f1d1d; --b50:#c0392b; --b100:#f1948a; --lake:#1f618d; }
   @media (prefers-color-scheme: dark) { :root { --ink:#e8ebef; --muted:#9aa4ae; --panel:#1b1f24ee; --line:#3a4149; } }
@@ -38,18 +39,58 @@
   .about { max-height:220px; overflow:auto; font-size:12px; line-height:1.4; padding-right:4px; }
   .about p { margin:5px 0; }
   .leaflet-popup-content { font:13px/1.4 -apple-system, system-ui, sans-serif; }
+
+  /* editorial style */
+  :root{--ink:#252525;--muted:#5f6368;--panel:#ffffffee;--line:#e3e5e8;--vc:#91b537;--vc-dark:#2a6338;--band:#f6d55c;--cobalt:#1a3a8f}
+  @media (prefers-color-scheme: dark){:root{--ink:#252525;--muted:#5f6368;--panel:#ffffffee;--line:#e3e5e8}}
+  html,body{font-family:'Noto Serif',Georgia,serif}
+  #band{position:absolute;top:0;left:0;right:0;z-index:1001;background:var(--band);color:var(--cobalt);padding:10px 18px 9px;border-bottom:3px solid var(--cobalt);box-shadow:0 2px 10px #0003}
+  #band h1{font-family:'Playfair Display',Georgia,serif;font-weight:900;font-size:1.9rem;line-height:1.1;margin:0;letter-spacing:-.01em}
+  #band h1 .pre{color:#8a1c1c}
+  #band .byline{font-family:'Fira Sans',system-ui,sans-serif;font-size:.85rem;margin:.25em 0 0;color:#1b2a5a}
+  #band .byline b{font-weight:600}
+  @media (max-width:700px){#band h1{font-size:1.25rem}}
+  #map{top:78px}
+  #panel{top:90px;font-family:'Fira Sans',system-ui,sans-serif;width:360px}
+  #panel h1{font-family:'Encode Sans Semi Condensed','Fira Sans',sans-serif;font-weight:700;font-size:1.2rem;margin:0 0 6px}
+  #panel h1.sub{font-size:1rem;margin-top:10px}
+  #status{font-family:'Encode Sans Semi Condensed',sans-serif}
+  .big{background:#f8f9fa;border:1px solid var(--line);border-radius:10px;padding:6px 12px;margin:6px 0 8px;display:flex;gap:14px;align-items:center}
+  .big b{font-family:'Encode Sans Semi Condensed',sans-serif;font-size:1.9rem;line-height:1;color:var(--cobalt)}
+  .big span{font-size:.8rem;color:var(--muted);line-height:1.25}
+  .takeaways{background:#f8f9fa;border-left:4px solid var(--vc-dark);padding:8px 12px;border-radius:5px;margin:8px 0}
+  .takeaways h3{font-family:'Encode Sans Semi Condensed',sans-serif;color:var(--vc-dark);margin:0 0 4px;font-size:.95rem}
+  .takeaways ul{margin:0;padding-left:1.1em;font-size:.85rem;line-height:1.35}
+  .takeaways li{margin:2px 0}
+  td.k{width:44px}
+  .sw{width:40px;height:16px;font-family:'Encode Sans Semi Condensed',sans-serif;font-size:10px;font-weight:700;color:#fff;text-align:center;line-height:16px;text-shadow:0 0 2px #000a}
+  .sw.light{color:#252525;text-shadow:none}
+  .src{font-style:italic;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:8px;padding-top:6px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .src b{font-style:normal;font-family:'Encode Sans Semi Condensed',sans-serif;letter-spacing:.1em;color:var(--ink)}
+  a{color:var(--ink);text-decoration:none;box-shadow:inset 0 -3px 0 var(--vc)}
 </style>
 </head>
 <body>
+<div id="band">
+  <h1><span class="pre">Mapped:</span> How Far Inland the 100-Mile Border Zone Reaches</h1>
+  <p class="byline">Published <b>September 14, 2026</b> &nbsp;·&nbsp; statute, regulation and 2024 Census data</p>
+</div>
 <div id="map"></div>
 <div id="panel">
-  <h1>How far in does the border zone reach?</h1>
+  <h1>Where do Americans live relative to the border zone?</h1>
+  <div class="big"><b>54.1%</b><span>of U.S. residents, 184.1M people, live inside the 100-mile zone (2024 county estimates, statutory reading)</span></div>
+  <div class="takeaways"><h3>Key Takeaways</h3><ul>
+    <li>117.6M people live within 25 miles of a boundary, the band where officers may also enter private land.</li>
+    <li>The zone covers 54.1% of the population under the statute, rising to 60.5% if CBP's Great Lakes reading holds.</li>
+    <li>156.0M people, 45.9%, live outside the zone under the statutory reading.</li>
+  </ul></div>
+  <h1 class="sub">Distance from a boundary</h1>
   <p id="status">Computing distance bands…</p>
   <table>
-    <tr><td class="k"><span class="sw" style="background:var(--b25)"></span></td><td><b>0–25 mi</b> from boundary — warrantless vehicle search <i>and</i> entry onto private land (not homes)<br><small><b>117.6M people</b> · 34.6% of the US</small></td></tr>
-    <tr><td class="k"><span class="sw" style="background:var(--b50)"></span></td><td><b>25–50 mi</b> — warrantless vehicle/vessel search authority<br><small><b>+34.7M</b> · cumulative 152.3M · 44.8%</small></td></tr>
-    <tr><td class="k"><span class="sw" style="background:var(--b100)"></span></td><td><b>50–100 mi</b> — same authority, outer limit of the zone<br><small><b>+31.8M</b> · cumulative 184.1M · 54.1%</small></td></tr>
-    <tr><td class="k"><span class="sw" style="background:#f9e79f;border:2px solid #b7950b"></span></td><td><b>Great Lakes claim</b> — extra reach if CBP measures 100 mi from every lakeshore, Lake Michigan included (not in the statute; ACLU of Michigan 2021; no court ruling)<br><small><b>+21.8M</b> · cumulative 205.9M · 60.5%</small></td></tr>
+    <tr><td class="k"><span class="sw" style="background:var(--b25)">0–25</span></td><td><b>0–25 mi</b> from boundary — warrantless vehicle search <i>and</i> entry onto private land (not homes)<br><small><b>117.6M people</b> · 34.6% of the US</small></td></tr>
+    <tr><td class="k"><span class="sw" style="background:var(--b50)">25–50</span></td><td><b>25–50 mi</b> — warrantless vehicle/vessel search authority<br><small><b>+34.7M</b> · cumulative 152.3M · 44.8%</small></td></tr>
+    <tr><td class="k"><span class="sw light" style="background:var(--b100)">50–100</span></td><td><b>50–100 mi</b> — same authority, outer limit of the zone<br><small><b>+31.8M</b> · cumulative 184.1M · 54.1%</small></td></tr>
+    <tr><td class="k"><span class="sw light" style="background:#f9e79f;border:2px solid #b7950b">lakes</span></td><td><b>Great Lakes claim</b> — extra reach if CBP measures 100 mi from every lakeshore, Lake Michigan included (not in the statute; ACLU of Michigan 2021; no court ruling)<br><small><b>+21.8M</b> · cumulative 205.9M · 60.5%</small></td></tr>
     <tr><td class="k"><span class="sw" style="background:none;border-style:dashed"></span></td><td>Unshaded — outside the 100-mile zone<br><small><b>156.0M</b> · 45.9% (statutory) · 134.2M · 39.5% if the lake claim holds</small></td></tr>
   </table>
   <label><input type="checkbox" id="togLakes" checked> Show the Great Lakes claim outline</label>
@@ -69,6 +110,7 @@
       <p><b>Last updated:</b> 2026-09-14.</p>
     </div>
   </details>
+  <p class="src"><b>BORDER ZONE MAP</b><span>Source: 8 U.S.C. § 1357(a)(3); 8 CFR 287.1; U.S. Census Bureau county estimates, vintage 2024; Natural Earth 1:50m. Distances are geodesic air miles, approximate. Not legal advice.</span></p>
 </div>
 
 <script src="vendor/leaflet-1.9.4.js"></script>
